@@ -4,7 +4,7 @@
 
 autopep8 . --recursive --in-place --pep8-passes 2000 --verbose
 
-# pytest -s -v src/tests/test_insert_views.py
+pytest -s -v
 # pytest -s -v src/tests/test_read_only_query_views.py
 # pytest -s -v src/tests/test_user_views.py
 

@@ -1,6 +1,6 @@
-# from src.flaskr import app, db
-# from mixer.backend.flask import mixer
+from src.flaskr import app
 import unittest
+
 
 class BaseTestCase(unittest.TestCase):
 
@@ -14,4 +14,3 @@ class BaseTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
-        # db.session.remove()
