@@ -2,6 +2,8 @@ from flask import Flask, session, request, json as flask_json
 from flask_socketio import SocketIO, send, emit, join_room, leave_room, \
     Namespace
 
+import json
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'this-is-secret'
 socketio = SocketIO(app)
@@ -19,20 +21,16 @@ def on_connect():
 
 @socketio.on('disconnect')
 def on_disconnect():
-
-
-global disconnected
-disconnected = '/'
+    global disconnected
+    disconnected = '/'
 
 
 @socketio.on('connect', namespace='/test')
 def on_connect_test():
-
-
-send('connected-test')
-send(json.dumps(dict(request.args)))
-send(json.dumps({h: request.headers[h] for h in request.headers.keys()
-                 if h not in ['Host', 'Content-Type', 'Content-Length']}))
+    send('connected-test')
+    send(json.dumps(dict(request.args)))
+    send(json.dumps({h: request.headers[h] for h in request.headers.keys()
+                     if h not in ['Host', 'Content-Type', 'Content-Length']}))
 
 
 @socketio.on('disconnect', namespace='/test')
@@ -60,6 +58,127 @@ def on_json(data):
 @socketio.on('message', namespace='/test')
 def on_message_test(message):
     send(message)
+
+
+@socketio.on('json', namespace='/test')
+def on_json_test(data):
+    send(data, json=True, namespace='/test')
+
+
+@socketio.on('my custom event')
+def on_custom_event(data):
+    emit('my custom response', data)
+    if not data.get('noackargs'):
+        return data
+
+
+@socketio.on('other custom event')
+@socketio.on('and another custom event')
+def get_request_event(data):
+    global request_event_data
+    request_event_data = request.event
+    emit('my custom response', data)
+
+
+def get_request_event2(data):
+    global request_event_data
+    request_event_data = request.event
+    emit('my custom response', data)
+    socketio.on_event('yet another custom event', get_request_event2)
+
+
+@socketio.on('my custom namespace event', namespace='/test')
+def on_custom_event_test(data):
+    emit('my custom namespace response', data, namespace='/test')
+
+
+def on_custom_event_test2(data):
+    emit('my custom namespace response', data, namespace='/test')
+    socketio.on_event('yet another custom namespace event', on_custom_event_test2,
+                      namespace='/test')
+
+
+@socketio.on('my custom broadcast event')
+def on_custom_event_broadcast(data):
+    emit('my custom response', data, broadcast=True)
+
+
+@socketio.on('my custom broadcast namespace event', namespace='/test')
+def on_custom_event_broadcast_test(data):
+    emit('my custom namespace response', data, namespace='/test',
+         broadcast=True)
+
+
+@socketio.on('join room')
+def on_join_room(data):
+    join_room(data['room'])
+
+
+@socketio.on('leave room')
+def on_leave_room(data):
+    leave_room(data['room'])
+
+
+@socketio.on('join room', namespace='/test')
+def on_join_room_namespace(data):
+    join_room(data['room'])
+
+
+@socketio.on('leave room', namespace='/test')
+def on_leave_room_namespace(data):
+    leave_room(data['room'])
+
+
+@socketio.on('my room event')
+def on_room_event(data):
+    room = data.pop('room')
+    emit('my room response', data, room=room)
+
+
+@socketio.on('my room namespace event', namespace='/test')
+def on_room_namespace_event(data):
+    room = data.pop('room')
+    send('room message', room=room)
+
+
+@socketio.on_error()
+def error_handler(value):
+    if isinstance(value, AssertionError):
+        global error_testing
+        error_testing = True
+    else:
+        raise value
+    return value
+
+
+@socketio.on('error testing')
+def raise_error(data):
+    raise AssertionError()
+
+
+@socketio.on_error('/test')
+def error_handler_namespace(value):
+    if isinstance(value, AssertionError):
+        global error_testing_namespace
+        error_testing_namespace = True
+    else:
+        raise value
+    return value
+
+
+@socketio.on("error testing", namespace='/test')
+def raise_error_namespace(data):
+    raise AssertionError()
+
+
+@socketio.on_error_default
+def error_handler_default(value):
+    if isinstance(value, AssertionError):
+        global error_testing_default
+        error_testing_default = True
+    else:
+        raise value
+    return value
 
 
 @app.route('/')

@@ -1,4 +1,4 @@
-from src.flaskr import app
+from src.flaskr import app, socketio
 import unittest
 
 
@@ -11,6 +11,8 @@ class BaseTestCase(unittest.TestCase):
         # init mixer
         # mixer.init_app(app)
         self.client = app.test_client()
+
+        self.socket_client = socketio.test_client(app)
 
     def tearDown(self):
         pass
